@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
@@ -9,46 +11,46 @@ interface User {
 @Injectable()
 export class UserService {
   private users: User[] = [
-    {
-      id: 1,
-      name: 'Jenna',
-      email: 'g5TtU@example.com',
-    },
-    {
-      id: 2,
-      name: 'Dookie',
-      email: 'OeCfM@example.com',
-    },
-    {
-      id: 3,
-      name: 'Taner',
-      email: 'q3TlE@example.com',
-    },
+    { id: 1, name: 'Jenna', email: 'jenna@example.com' },
+    { id: 2, name: 'Dookie', email: 'dookie@example.com' },
+    { id: 3, name: 'Taner', email: 'taner@example.com' },
   ];
-  findAll(name: string): User[] {
+
+  findAll(name?: string): User[] {
+    if (!name) {
+      return this.users;
+    }
     return this.users.filter((user) =>
       user.name.toLowerCase().includes(name.toLowerCase()),
     );
   }
 
-  findById(id: number): User | undefined {
-    return this.users.find((user) => user.id === id);
+  findById(id: number): User {
+    const user = this.users.find((user) => user.id === id);
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+    return user;
   }
 
-  create(user: User): User {
-    const newUser = { ...user, id: this.users.length + 1 };
+  create(createUserDto: CreateUserDto): User {
+    const nextId = this.users.length
+      ? Math.max(...this.users.map((user) => user.id)) + 1
+      : 1;
+    const newUser: User = { id: nextId, ...createUserDto };
     this.users.push(newUser);
     return newUser;
   }
 
-  update(id: number, updatedUser: Partial<User>): User | undefined {
-    const userIndex = this.users.findIndex((user) => user.id === id);
-    if (userIndex === -1) {
-      return undefined;
-    }
-    const user = this.users[userIndex];
-    const updated = { ...user, ...updatedUser };
-    this.users[userIndex] = updated;
+  update(id: number, updateUserDto: UpdateUserDto): User {
+    const user = this.findById(id);
+    const updated = { ...user, ...updateUserDto };
+    this.users[this.users.indexOf(user)] = updated;
     return updated;
+  }
+
+  remove(id: number): void {
+    const user = this.findById(id);
+    this.users = this.users.filter((u) => u.id !== user.id);
   }
 }
